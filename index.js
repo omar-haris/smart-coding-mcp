@@ -99,8 +99,11 @@ async function initialize() {
   features[1].instance = hybridSearch;
   features[2].instance = cacheClearer;
 
-  // Index codebase
-  await indexer.initialize();
+  // Start indexing in background (non-blocking)
+  console.error("[Server] Starting background indexing...");
+  indexer.initialize().catch(err => {
+    console.error("[Server] Background indexing error:", err.message);
+  });
 }
 
 // Setup MCP server
