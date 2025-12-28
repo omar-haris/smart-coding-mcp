@@ -50,8 +50,8 @@
     "**/.smart-coding-cache/**"
   ],
   "smartIndexing": true,
-  "chunkSize": 15,
-  "chunkOverlap": 3,
+  "chunkSize": 25,
+  "chunkOverlap": 5,
   "batchSize": 100,
   "maxFileSize": 1048576,
   "maxResults": 5,
@@ -61,5 +61,6 @@
   "verbose": false,
   "embeddingModel": "Xenova/all-MiniLM-L6-v2",
   "semanticWeight": 0.7,
-  "exactMatchBoost": 1.5
+  "exactMatchBoost": 1.5,
+  "workerThreads": "auto"
 }
