@@ -63,7 +63,39 @@ Add to your MCP configuration file. The location depends on your IDE and OS:
 
 Add the server configuration to the `mcpServers` object in your config file:
 
-### Option 1: Specific Project (Recommended)
+### Option 1: Auto-Detection (Recommended)
+
+Use the `${workspaceFolder}` variable for automatic project detection:
+
+```json
+{
+  "mcpServers": {
+    "smart-coding-mcp": {
+      "command": "smart-coding-mcp",
+      "args": ["--workspace", "${workspaceFolder}"]
+    }
+  }
+}
+```
+
+**Client Compatibility:**
+
+| Client           | Supports `${workspaceFolder}` |
+| ---------------- | ----------------------------- |
+| VS Code          | Yes                           |
+| Cursor (Cascade) | Yes                           |
+| Antigravity      | Yes                           |
+| Claude Desktop   | No (use Option 2)             |
+
+**Why this is better:**
+
+- **Auto-Detection**: When you switch between different projects, your IDE automatically sends the new path to the MCP.
+- **Local Cache**: The MCP correctly creates the `.smart-coding-cache` folder inside the project you are actually working on.
+- **No Manual Updates**: You don't have to change your config every time you open a new project.
+
+### Option 2: Absolute Path
+
+For clients that don't support dynamic variables (like Claude Desktop):
 
 ```json
 {
@@ -76,18 +108,25 @@ Add the server configuration to the `mcpServers` object in your config file:
 }
 ```
 
-### Option 2: Multi-Project Support
+> [!NOTE]
+> Claude Desktop does not currently support variable interpolation. You must use absolute paths and update the configuration manually when switching projects.
+
+### Option 3: Cross-Project Search (Advanced)
+
+**Note:** You do **NOT** need this if you just want to work on different projects in different windows. Option 1 already handles that automatically by launching a separate instance for each window.
+
+Use this option ONLY if you need to search code from *another* project while working in your current one (e.g., searching your backend API repo while working in your frontend repo).
 
 ```json
 {
   "mcpServers": {
-    "smart-coding-mcp-project-a": {
+    "smart-coding-mcp-frontend": {
       "command": "smart-coding-mcp",
-      "args": ["--workspace", "/path/to/project-a"]
+      "args": ["--workspace", "/path/to/frontend"]
     },
-    "smart-coding-mcp-project-b": {
+    "smart-coding-mcp-backend": {
       "command": "smart-coding-mcp",
-      "args": ["--workspace", "/path/to/project-b"]
+      "args": ["--workspace", "/path/to/backend"]
     }
   }
 }

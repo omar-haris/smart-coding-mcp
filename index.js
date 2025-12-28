@@ -27,21 +27,23 @@ let workspaceDir = null;
 if (workspaceIndex !== -1) {
   const arg = args[workspaceIndex];
   let rawWorkspace = null;
-  
+
   if (arg.includes('=')) {
     rawWorkspace = arg.split('=')[1];
   } else if (workspaceIndex + 1 < args.length) {
     rawWorkspace = args[workspaceIndex + 1];
   }
-  
+
   // Check if IDE variable wasn't expanded (contains ${})
   if (rawWorkspace && rawWorkspace.includes('${')) {
-    console.error(`[Server] IDE variable not expanded: ${rawWorkspace}, using current directory`);
-    workspaceDir = process.cwd();
+    console.error(`[Server] FATAL: Workspace variable "${rawWorkspace}" was not expanded by your IDE.`);
+    console.error(`[Server] This typically means your MCP client does not support dynamic variables.`);
+    console.error(`[Server] Please use an absolute path instead: --workspace /path/to/your/project`);
+    process.exit(1);
   } else if (rawWorkspace) {
     workspaceDir = rawWorkspace;
   }
-  
+
   if (workspaceDir) {
     console.error(`[Server] Workspace mode: ${workspaceDir}`);
   }
@@ -77,7 +79,7 @@ const features = [
 async function initialize() {
   // Load configuration with workspace support
   config = await loadConfig(workspaceDir);
-  
+
   // Ensure search directory exists
   try {
     await fs.access(config.searchDirectory);
@@ -118,21 +120,21 @@ async function initialize() {
 
 // Setup MCP server
 const server = new Server(
-  { 
-    name: "smart-coding-mcp", 
-    version: packageJson.version 
+  {
+    name: "smart-coding-mcp",
+    version: packageJson.version
   },
-  { 
-    capabilities: { 
-      tools: {} 
-    } 
+  {
+    capabilities: {
+      tools: {}
+    }
   }
 );
 
 // Register tools from all features
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   const tools = [];
-  
+
   for (const feature of features) {
     const toolDef = feature.module.getToolDefinition(config);
     tools.push(toolDef);
@@ -145,7 +147,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   for (const feature of features) {
     const toolDef = feature.module.getToolDefinition(config);
-    
+
     if (request.params.name === toolDef.name) {
       return await feature.handler(request, feature.instance);
     }
@@ -162,29 +164,29 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 // Main entry point
 async function main() {
   await initialize();
-  
+
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  
+
   console.error("[Server] Smart Coding MCP server ready!");
 }
 
 // Graceful shutdown
 process.on('SIGINT', async () => {
   console.error("\n[Server] Shutting down gracefully...");
-  
+
   // Stop file watcher
   if (indexer && indexer.watcher) {
     await indexer.watcher.close();
     console.error("[Server] File watcher stopped");
   }
-  
+
   // Save cache
   if (cache) {
     await cache.save();
     console.error("[Server] Cache saved");
   }
-  
+
   console.error("[Server] Goodbye!");
   process.exit(0);
 });
