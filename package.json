@@ -4,9 +4,6 @@
   "description": "An extensible MCP server that enhances coding productivity with AI-powered features including semantic code search, intelligent indexing, and more, using local LLMs",
   "type": "module",
   "main": "index.js",
-  "publishConfig": {
-    "registry": "https://www.npmjs.com/package/smart-coding-mcp"
-  },
   "bin": {
     "smart-coding-mcp": "index.js"
   },
