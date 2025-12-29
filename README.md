@@ -72,6 +72,21 @@ Use the `${workspaceFolder}` variable for automatic project detection:
   "mcpServers": {
     "smart-coding-mcp": {
       "command": "smart-coding-mcp",
+      "args": []
+    }
+  }
+}
+```
+
+By default, the server indexes the directory it is started in (process.cwd). Most clients (VS Code, Cascade) start MCP servers in the workspace root automatically, so no arguments are needed!
+
+If you prefer to be explicit or if your client starts the server elsewhere:
+
+```json
+{
+  "mcpServers": {
+    "smart-coding-mcp": {
+      "command": "smart-coding-mcp",
       "args": ["--workspace", "${workspaceFolder}"]
     }
   }

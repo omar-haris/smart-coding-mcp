@@ -22,7 +22,7 @@ import * as ClearCacheFeature from "./features/clear-cache.js";
 // Parse workspace from command line arguments
 const args = process.argv.slice(2);
 const workspaceIndex = args.findIndex(arg => arg.startsWith('--workspace'));
-let workspaceDir = null;
+let workspaceDir = process.cwd();
 
 if (workspaceIndex !== -1) {
   const arg = args[workspaceIndex];
