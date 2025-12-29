@@ -18,7 +18,9 @@ import { HybridSearch } from "./features/hybrid-search.js";
 import * as IndexCodebaseFeature from "./features/index-codebase.js";
 import * as HybridSearchFeature from "./features/hybrid-search.js";
 import * as ClearCacheFeature from "./features/clear-cache.js";
+import * as ConfigureFeature from "./features/configure.js";
 
+// Parse workspace from command line arguments
 // Parse workspace from command line arguments
 const args = process.argv.slice(2);
 const workspaceIndex = args.findIndex(arg => arg.startsWith('--workspace'));
@@ -36,10 +38,11 @@ if (workspaceIndex !== -1) {
 
   // Check if IDE variable wasn't expanded (contains ${})
   if (rawWorkspace && rawWorkspace.includes('${')) {
-    console.error(`[Server] FATAL: Workspace variable "${rawWorkspace}" was not expanded by your IDE.`);
-    console.error(`[Server] This typically means your MCP client does not support dynamic variables.`);
-    console.error(`[Server] Please use an absolute path instead: --workspace /path/to/your/project`);
-    process.exit(1);
+    console.error(`[Server] WARNING: Workspace variable "${rawWorkspace}" was not expanded by your IDE.`);
+    console.error(`[Server] The server will default to the current working directory: ${process.cwd()}`);
+    console.error(`[Server] You can use the 'configure_workspace' tool to set the correct path dynamically.`);
+    // Do NOT exit, fall back to default
+    workspaceDir = process.cwd();
   } else if (rawWorkspace) {
     workspaceDir = rawWorkspace;
   }
@@ -72,6 +75,11 @@ const features = [
     module: ClearCacheFeature,
     instance: null,
     handler: ClearCacheFeature.handleToolCall
+  },
+  {
+    module: ConfigureFeature,
+    instance: null,
+    handler: ConfigureFeature.handleToolCall
   }
 ];
 
@@ -100,11 +108,13 @@ async function initialize() {
   indexer = new CodebaseIndexer(embedder, cache, config, server);
   hybridSearch = new HybridSearch(embedder, cache, config);
   const cacheClearer = new ClearCacheFeature.CacheClearer(embedder, cache, config, indexer);
+  const configurator = new ConfigureFeature.Configure(config);
 
   // Store feature instances (matches features array order)
   features[0].instance = hybridSearch;
   features[1].instance = indexer;
   features[2].instance = cacheClearer;
+  features[3].instance = configurator;
 
   // Start indexing in background (non-blocking)
   console.error("[Server] Starting background indexing...");
