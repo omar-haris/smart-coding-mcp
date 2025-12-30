@@ -11,7 +11,7 @@ An extensible Model Context Protocol (MCP) server that provides intelligent sema
 
 AI coding assistants work better when they can find relevant code quickly. Traditional keyword search falls short - if you ask "where do we handle authentication?" but your code uses "login" and "session", keyword search misses it.
 
-This MCP server solves that by indexing your codebase with AI embeddings. Your AI assistant can search by meaning instead of exact keywords, finding relevant code even when the terminology differs.
+This MCP server solves that by indexing your codebase with AI embeddings. Your AI assistant can search by meaning instead of exact keywords, finding relevant code even when the terminology differs. **Zero-configuration required—just run it and it works.**
 
 ![Example](example.png)
 
@@ -43,6 +43,12 @@ Install globally via npm:
 npm install -g smart-coding-mcp
 ```
 
+Or run directly without installation using `npx`:
+
+```bash
+npx smart-coding-mcp
+```
+
 To update to the latest version:
 
 ```bash
@@ -63,34 +69,96 @@ Add to your MCP configuration file. The location depends on your IDE and OS:
 
 Add the server configuration to the `mcpServers` object in your config file:
 
-### Option 1: Specific Project (Recommended)
+### Option 1: Zero-Config (Recommended)
+
+The simplest way to use the server is via `npx`. **No arguments needed.** The server will automatically detect your project root from the IDE's handshake protocol.
+
+```json
+{
+  "mcpServers": {
+    "smart-coding-mcp": {
+      "command": "npx",
+      "args": ["-y", "smart-coding-mcp"]
+    }
+  }
+}
+```
+
+**How it works:**
+1. Your IDE starts the server.
+2. The server waits for the first `initialize` message.
+3. It detects the `rootUri` or `workspaceFolders` sent by the IDE.
+4. It indexes that folder automatically.
+
+**Client Compatibility Table:**
+
+| Client           | Zero-Config Support | Notes |
+| ---------------- | ------------------- | ----- |
+| **VS Code**      | ✅ Yes              | Best experience. |
+| **Cursor**       | ✅ Yes              | Fully supported. |
+| **Claude Desktop**| ❌ No               | Does not send workspace context. Use Option 2. |
+| **Antigravity**  | ⚠️ Partial          | Depends on version. If automatic detection fails, use Option 2. |
+
+### Option 2: Explicit Configuration (Robust Fallback)
+
+If Zero-Config doesn't work (e.g., folder not created), or if you are using a client that doesn't send workspace context (like Claude Desktop or some Antigravity versions), use explicit arguments:
 
 ```json
 {
   "mcpServers": {
     "smart-coding-mcp": {
       "command": "smart-coding-mcp",
-      "args": ["--workspace", "/absolute/path/to/your/project"]
+      "args": ["--workspace", "C:/path/to/your/project"]
     }
   }
 }
 ```
 
-### Option 2: Multi-Project Support
+> [!TIP]
+> **Use Proper Paths**: Windows users should use forward slashes `/` (e.g., `C:/Projects/MyCode`) to avoid JSON escaping issues.
+
+#### Helper for Antigravity Users
+If manual configuration feels too complex, we built a simple auto-setup command.
+
+1. Open your project in the terminal.
+2. Run this single command:
+
+```bash
+npx smart-coding-mcp --configure
+```
+
+This will automatically find your Antigravity config file and update it to point to your **current folder**. Then, simply **Reload Window** to finish.
+
+### Feature: Smart Shutdown
+The server includes a "zombie process" protection mechanism. It monitors the standard input connection from the IDE; if the IDE closes or crashes, the server automatically shuts down to prevent resource exhaustion (memory leaks).
+
+### Option 3: Cross-Project Search (Advanced)
+
+**Note:** You do **NOT** need this if you just want to work on different projects in different windows. Option 1 already handles that automatically by launching a separate instance for each window.
+
+Use this option ONLY if you need to search code from *another* project while working in your current one (e.g., searching your backend API repo while working in your frontend repo).
 
 ```json
 {
   "mcpServers": {
-    "smart-coding-mcp-project-a": {
+    "smart-coding-mcp-frontend": {
       "command": "smart-coding-mcp",
-      "args": ["--workspace", "/path/to/project-a"]
+      "args": ["--workspace", "/path/to/frontend"]
     },
-    "smart-coding-mcp-project-b": {
+    "smart-coding-mcp-backend": {
       "command": "smart-coding-mcp",
-      "args": ["--workspace", "/path/to/project-b"]
+      "args": ["--workspace", "/path/to/backend"]
     }
   }
 }
+```
+
+### Troubleshooting & CLI
+
+To see all available options and environment variables, you can run the server with the `--help` flag:
+
+```bash
+npx smart-coding-mcp --help
 ```
 
 ## Environment Variables
