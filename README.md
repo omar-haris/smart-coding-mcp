@@ -71,7 +71,7 @@ Add the server configuration to the `mcpServers` object in your config file:
 
 ### Option 1: Zero-Config (Recommended)
 
-The simplest way to use the server is via `npx`. This ensures you always have the latest version and requires zero manual setup:
+The simplest way to use the server is via `npx`. **No arguments needed.** The server will automatically detect your project root from the IDE's handshake protocol.
 
 ```json
 {
@@ -84,53 +84,53 @@ The simplest way to use the server is via `npx`. This ensures you always have th
 }
 ```
 
-By default, the server indexes the directory it is started in (`process.cwd()`). Most clients (VS Code, Cascade, Antigravity) start MCP servers in the workspace root automatically, so it works out of the box!
+**How it works:**
+1. Your IDE starts the server.
+2. The server waits for the first `initialize` message.
+3. It detects the `rootUri` or `workspaceFolders` sent by the IDE.
+4. It indexes that folder automatically.
 
-If you prefer to be explicit or if your client starts the server elsewhere:
+**Client Compatibility Table:**
 
-```json
-{
-  "mcpServers": {
-    "smart-coding-mcp": {
-      "command": "smart-coding-mcp",
-      "args": ["--workspace", "${workspaceFolder}"]
-    }
-  }
-}
-```
+| Client           | Zero-Config Support | Notes |
+| ---------------- | ------------------- | ----- |
+| **VS Code**      | ✅ Yes              | Best experience. |
+| **Cursor**       | ✅ Yes              | Fully supported. |
+| **Claude Desktop**| ❌ No               | Does not send workspace context. Use Option 2. |
+| **Antigravity**  | ⚠️ Partial          | Depends on version. If automatic detection fails, use Option 2. |
 
-**Client Compatibility:**
+### Option 2: Explicit Configuration (Robust Fallback)
 
-| Client           | Supports `${workspaceFolder}` |
-| ---------------- | ----------------------------- |
-| VS Code          | Yes                           |
-| Cursor (Cascade) | Yes                           |
-| Antigravity      | Yes                           |
-| Claude Desktop   | No (use Option 2)             |
-
-**Why this is better:**
-
-- **Auto-Detection**: When you switch between different projects, your IDE automatically sends the new path to the MCP.
-- **Local & Hidden Cache**: The MCP automatically creates the `.smart-coding-cache` folder inside your project. On Windows, this folder is marked as **Hidden** to keep your file tree clean.
-- **Zero-Touch setup**: You don't have to change your config every time you open a new project.
-
-### Option 2: Absolute Path
-
-For clients that don't support dynamic variables (like Claude Desktop):
+If Zero-Config doesn't work (e.g., folder not created), or if you are using a client that doesn't send workspace context (like Claude Desktop or some Antigravity versions), use explicit arguments:
 
 ```json
 {
   "mcpServers": {
     "smart-coding-mcp": {
       "command": "smart-coding-mcp",
-      "args": ["--workspace", "/absolute/path/to/your/project"]
+      "args": ["--workspace", "C:/path/to/your/project"]
     }
   }
 }
 ```
 
-> [!NOTE]
-> Claude Desktop does not currently support variable interpolation. You must use absolute paths and update the configuration manually when switching projects.
+> [!TIP]
+> **Use Proper Paths**: Windows users should use forward slashes `/` (e.g., `C:/Projects/MyCode`) to avoid JSON escaping issues.
+
+#### Helper for Antigravity Users
+If manual configuration feels too complex, we built a simple auto-setup command.
+
+1. Open your project in the terminal.
+2. Run this single command:
+
+```bash
+npx smart-coding-mcp --configure
+```
+
+This will automatically find your Antigravity config file and update it to point to your **current folder**. Then, simply **Reload Window** to finish.
+
+### Feature: Smart Shutdown
+The server includes a "zombie process" protection mechanism. It monitors the standard input connection from the IDE; if the IDE closes or crashes, the server automatically shuts down to prevent resource exhaustion (memory leaks).
 
 ### Option 3: Cross-Project Search (Advanced)
 
