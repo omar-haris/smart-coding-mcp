@@ -13,8 +13,14 @@ export class Configure {
         // Validate path
         try {
             await fs.access(targetDir);
-        } catch {
-            return { success: false, message: `Invalid path: ${targetDir}. Directory does not exist.` };
+        } catch (error) {
+            let message = `Access failed for path: ${targetDir}. ${error.message}`;
+            if (error.code === 'ENOENT') {
+                message = `Invalid path: ${targetDir}. Directory does not exist.`;
+            } else if (error.code === 'EACCES' || error.code === 'EPERM') {
+                message = `Permission denied: ${targetDir}. Please check your permissions.`;
+            }
+            return { success: false, message, code: error.code };
         }
 
         // Save settings to Encapsulated Project Config (.smart-coding-cache/config.json)
@@ -61,12 +67,33 @@ export function getToolDefinition(config) {
 }
 
 export async function handleToolCall(request, instance) {
-    const newPath = request.params.arguments.path;
-    const settings = request.params.arguments.settings;
+    if (!request?.params?.arguments?.path) {
+        return {
+            isError: true,
+            content: [{ type: "text", text: "Error: Missing required argument 'path'." }]
+        };
+    }
 
-    const result = await instance.configure(newPath, settings);
+    try {
+        const newPath = request.params.arguments.path;
+        const settings = request.params.arguments.settings || {};
 
-    return {
-        content: [{ type: "text", text: result.message }]
-    };
+        const result = await instance.configure(newPath, settings);
+
+        if (!result.success) {
+            return {
+                isError: true,
+                content: [{ type: "text", text: result.message }]
+            };
+        }
+
+        return {
+            content: [{ type: "text", text: result.message }]
+        };
+    } catch (error) {
+        return {
+            isError: true,
+            content: [{ type: "text", text: `Configuration failed: ${error.message}` }]
+        };
+    }
 }
