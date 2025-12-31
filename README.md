@@ -5,16 +5,18 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D18-green.svg)](https://nodejs.org/)
 
-An extensible Model Context Protocol (MCP) server that provides intelligent semantic code search for AI assistants. Built with local AI models (RAG), inspired by Cursor's semantic search research.
+An extensible Model Context Protocol (MCP) server that provides intelligent semantic code search for AI assistants. Built with local AI models using Matryoshka Representation Learning (MRL) for flexible embedding dimensions (64-768d), with runtime workspace switching and comprehensive status reporting.
 
 ### Available Tools
 
-| Tool                   | Description                                       | Example                                        |
-| ---------------------- | ------------------------------------------------- | ---------------------------------------------- |
-| `semantic_search`      | Find code by meaning, not just keywords           | `"Where do we validate user input?"`           |
-| `index_codebase`       | Manually trigger reindexing                       | Use after major refactoring or branch switches |
-| `clear_cache`          | Reset the embeddings cache                        | Useful when cache becomes corrupted            |
-| `d_check_last_version` | Get latest version of any package (20 ecosystems) | `"express"`, `"npm:react"`, `"pip:requests"`   |
+| Tool                   | Description                                       | Example                                         |
+| ---------------------- | ------------------------------------------------- | ----------------------------------------------- |
+| `semantic_search`      | Find code by meaning, not just keywords           | `"Where do we validate user input?"`            |
+| `index_codebase`       | Manually trigger reindexing                       | Use after major refactoring or branch switches  |
+| `clear_cache`          | Reset the embeddings cache                        | Useful when cache becomes corrupted             |
+| `d_check_last_version` | Get latest version of any package (20 ecosystems) | `"express"`, `"npm:react"`, `"pip:requests"`    |
+| `e_set_workspace`      | Change project path at runtime                    | Switch to different project without restart     |
+| `f_get_status`         | Get server info: version, index status, config    | Check indexing progress, model info, cache size |
 
 ## What This Does
 
@@ -130,19 +132,22 @@ For clients that support dynamic variables (VS Code, Cursor):
 
 Override configuration settings via environment variables in your MCP config:
 
-| Variable                         | Type    | Default                   | Description                           |
-| -------------------------------- | ------- | ------------------------- | ------------------------------------- |
-| `SMART_CODING_VERBOSE`           | boolean | `false`                   | Enable detailed logging               |
-| `SMART_CODING_BATCH_SIZE`        | number  | `100`                     | Files to process in parallel          |
-| `SMART_CODING_MAX_FILE_SIZE`     | number  | `1048576`                 | Max file size in bytes (1MB)          |
-| `SMART_CODING_CHUNK_SIZE`        | number  | `25`                      | Lines of code per chunk               |
-| `SMART_CODING_MAX_RESULTS`       | number  | `5`                       | Max search results                    |
-| `SMART_CODING_SMART_INDEXING`    | boolean | `true`                    | Enable smart project detection        |
-| `SMART_CODING_WATCH_FILES`       | boolean | `false`                   | Enable file watching for auto-reindex |
-| `SMART_CODING_SEMANTIC_WEIGHT`   | number  | `0.7`                     | Weight for semantic similarity (0-1)  |
-| `SMART_CODING_EXACT_MATCH_BOOST` | number  | `1.5`                     | Boost for exact text matches          |
-| `SMART_CODING_EMBEDDING_MODEL`   | string  | `Xenova/all-MiniLM-L6-v2` | AI embedding model to use             |
-| `SMART_CODING_WORKER_THREADS`    | string  | `auto`                    | Worker threads (`auto` or 1-32)       |
+| Variable                           | Type    | Default                          | Description                                |
+| ---------------------------------- | ------- | -------------------------------- | ------------------------------------------ |
+| `SMART_CODING_VERBOSE`             | boolean | `false`                          | Enable detailed logging                    |
+| `SMART_CODING_BATCH_SIZE`          | number  | `100`                            | Files to process in parallel               |
+| `SMART_CODING_MAX_FILE_SIZE`       | number  | `1048576`                        | Max file size in bytes (1MB)               |
+| `SMART_CODING_CHUNK_SIZE`          | number  | `25`                             | Lines of code per chunk                    |
+| `SMART_CODING_MAX_RESULTS`         | number  | `5`                              | Max search results                         |
+| `SMART_CODING_SMART_INDEXING`      | boolean | `true`                           | Enable smart project detection             |
+| `SMART_CODING_WATCH_FILES`         | boolean | `false`                          | Enable file watching for auto-reindex      |
+| `SMART_CODING_SEMANTIC_WEIGHT`     | number  | `0.7`                            | Weight for semantic similarity (0-1)       |
+| `SMART_CODING_EXACT_MATCH_BOOST`   | number  | `1.5`                            | Boost for exact text matches               |
+| `SMART_CODING_EMBEDDING_MODEL`     | string  | `nomic-ai/nomic-embed-text-v1.5` | AI embedding model to use                  |
+| `SMART_CODING_EMBEDDING_DIMENSION` | number  | `256`                            | MRL dimension (64, 128, 256, 512, 768)     |
+| `SMART_CODING_DEVICE`              | string  | `cpu`                            | Inference device (`cpu`, `webgpu`, `auto`) |
+| `SMART_CODING_CHUNKING_MODE`       | string  | `smart`                          | Code chunking (`smart`, `ast`, `line`)     |
+| `SMART_CODING_WORKER_THREADS`      | string  | `auto`                           | Worker threads (`auto` or 1-32)            |
 
 **Example with environment variables:**
 
@@ -166,16 +171,72 @@ Override configuration settings via environment variables in your MCP config:
 
 ## How It Works
 
-The server indexes your code in four steps:
+```mermaid
+flowchart TB
+    subgraph IDE["IDE / AI Assistant"]
+        Agent["AI Agent<br/>(Claude, GPT, Gemini)"]
+    end
 
-1. **Discovery**: Scans your project for source files
-2. **Chunking**: Breaks code into meaningful pieces (respecting function boundaries)
-3. **Embedding**: Converts each chunk to a vector using a local AI model
-4. **Storage**: Saves embeddings to `.smart-coding-cache/` for fast startup
+    subgraph MCP["Smart Coding MCP Server"]
+        direction TB
+        Protocol["Model Context Protocol<br/>JSON-RPC over stdio"]
+        Tools["MCP Tools<br/>semantic_search | index_codebase | set_workspace | get_status"]
 
-When you search, your query is converted to the same vector format and compared against all code chunks using cosine similarity. The most relevant matches are returned.
+        subgraph Indexing["Indexing Pipeline"]
+            Discovery["File Discovery<br/>glob patterns + smart ignore"]
+            Chunking["Code Chunking<br/>Smart (regex) / AST (Tree-sitter)"]
+            Embedding["AI Embedding<br/>transformers.js + ONNX Runtime"]
+        end
 
-![How It Works](how-its-works.png)
+        subgraph AI["AI Model"]
+            Model["nomic-embed-text-v1.5<br/>Matryoshka Representation Learning"]
+            Dimensions["Flexible Dimensions<br/>64 | 128 | 256 | 512 | 768"]
+            Normalize["Layer Norm → Slice → L2 Normalize"]
+        end
+
+        subgraph Search["Search"]
+            QueryEmbed["Query → Vector"]
+            Cosine["Cosine Similarity"]
+            Hybrid["Hybrid Search<br/>Semantic + Exact Match Boost"]
+        end
+    end
+
+    subgraph Storage["Cache"]
+        Vectors["Vector Store<br/>embeddings.json"]
+        Hashes["File Hashes<br/>Incremental updates"]
+    end
+
+    Agent <-->|"MCP Protocol"| Protocol
+    Protocol --> Tools
+
+    Tools --> Discovery
+    Discovery --> Chunking
+    Chunking --> Embedding
+    Embedding --> Model
+    Model --> Dimensions
+    Dimensions --> Normalize
+    Normalize --> Vectors
+
+    Tools --> QueryEmbed
+    QueryEmbed --> Model
+    Cosine --> Hybrid
+    Vectors --> Cosine
+    Hybrid --> Agent
+```
+
+### Tech Stack
+
+| Component     | Technology                            |
+| ------------- | ------------------------------------- |
+| **Protocol**  | Model Context Protocol (JSON-RPC)     |
+| **AI Model**  | nomic-embed-text-v1.5 (MRL)           |
+| **Inference** | transformers.js + ONNX Runtime        |
+| **Chunking**  | Smart regex / Tree-sitter AST         |
+| **Search**    | Cosine similarity + exact match boost |
+
+### Search Flow
+
+Query → Vector embedding → Cosine similarity → Ranked results
 
 ## Examples
 
@@ -214,11 +275,18 @@ Finds all try/catch blocks and error handling patterns.
 
 ## Technical Details
 
-**Embedding Model**: all-MiniLM-L6-v2 via transformers.js
+**Embedding Model**: nomic-embed-text-v1.5 via transformers.js v3
 
-- Fast inference (CPU-friendly)
-- Small model size (~100MB)
-- Good accuracy for code search
+- Matryoshka Representation Learning (MRL) for flexible dimensions
+- Configurable output: 64, 128, 256, 512, or 768 dimensions
+- Longer context (8192 tokens vs 256 for MiniLM)
+- Better code understanding through specialized training
+- WebGPU support for up to 100x faster inference (when available)
+
+**Legacy Model**: all-MiniLM-L6-v2 (fallback)
+
+- Fast inference, small footprint (~100MB)
+- Fixed 384-dimensional output
 
 **Vector Similarity**: Cosine similarity
 
