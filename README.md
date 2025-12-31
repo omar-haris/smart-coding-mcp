@@ -72,7 +72,46 @@ Add to your MCP configuration file. The location depends on your IDE and OS:
 
 Add the server configuration to the `mcpServers` object in your config file:
 
-### Option 1: Specific Project (Recommended)
+### Option 1: Auto-Detection (Recommended)
+
+By default, the server indexes the directory it is started in. Most clients start MCP servers in the workspace root automatically:
+
+```json
+{
+  "mcpServers": {
+    "smart-coding-mcp": {
+      "command": "smart-coding-mcp",
+      "args": []
+    }
+  }
+}
+```
+
+For explicit workspace control, use the `${workspaceFolder}` variable:
+
+```json
+{
+  "mcpServers": {
+    "smart-coding-mcp": {
+      "command": "smart-coding-mcp",
+      "args": ["--workspace", "${workspaceFolder}"]
+    }
+  }
+}
+```
+
+**Client Compatibility:**
+
+| Client           | Supports `${workspaceFolder}` |
+| ---------------- | ----------------------------- |
+| VS Code          | Yes                           |
+| Cursor (Cascade) | Yes                           |
+| Antigravity      | Yes                           |
+| Claude Desktop   | No (use Option 2)             |
+
+### Option 2: Absolute Path (Claude Desktop)
+
+For clients that don't support dynamic variables:
 
 ```json
 {
@@ -85,18 +124,18 @@ Add the server configuration to the `mcpServers` object in your config file:
 }
 ```
 
-### Option 2: Multi-Project Support
+### Option 3: Multi-Project Support
 
 ```json
 {
   "mcpServers": {
-    "smart-coding-mcp-project-a": {
+    "smart-coding-mcp-frontend": {
       "command": "smart-coding-mcp",
-      "args": ["--workspace", "/path/to/project-a"]
+      "args": ["--workspace", "/path/to/frontend"]
     },
-    "smart-coding-mcp-project-b": {
+    "smart-coding-mcp-backend": {
       "command": "smart-coding-mcp",
-      "args": ["--workspace", "/path/to/project-b"]
+      "args": ["--workspace", "/path/to/backend"]
     }
   }
 }
