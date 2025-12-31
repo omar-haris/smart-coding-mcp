@@ -131,35 +131,20 @@ Override configuration settings via environment variables in your MCP config:
 
 **Note**: The server starts instantly and indexes in the background, so your IDE won't be blocked waiting for indexing to complete.
 
-## Available Tools
+## Smart Coding MCP
 
-**semantic_search** - Find code by meaning
+### Available Tools
 
-```
-Query: "Where do we validate user input?"
-Returns: Relevant validation code with file paths and line numbers
-```
+| Tool                   | Description                             | Example                                        |
+| ---------------------- | --------------------------------------- | ---------------------------------------------- |
+| `semantic_search`      | Find code by meaning, not just keywords | `"Where do we validate user input?"`           |
+| `index_codebase`       | Manually trigger reindexing             | Use after major refactoring or branch switches |
+| `clear_cache`          | Reset the embeddings cache              | Useful when cache becomes corrupted            |
+| `d_check_last_version` | Get latest version of any package       | `"express"`, `"npm:react"`, `"pip:requests"`   |
 
-**index_codebase** - Manually trigger reindexing
+### Supported Package Ecosystems (20)
 
-```
-Use after major refactoring or branch switches
-```
-
-**clear_cache** - Reset the embeddings cache
-
-```
-Useful when cache becomes corrupted or outdated
-```
-
-**d_check_last_version** - Get the latest version of any package
-
-```
-Query: "express" or "npm:react" or "pip:requests"
-Returns: Latest version from the official registry
-```
-
-Supports 20 ecosystems: npm, PyPI, Packagist, Crates.io, Maven, Go, RubyGems, NuGet, CocoaPods, Hex, CRAN, CPAN, pub.dev, Homebrew, Conda, Clojars, Hackage, Julia, Swift PM, Chocolatey.
+npm, PyPI, Packagist, Crates.io, Maven, Go, RubyGems, NuGet, CocoaPods, Hex, CRAN, CPAN, pub.dev, Homebrew, Conda, Clojars, Hackage, Julia, Swift PM, Chocolatey
 
 ## How It Works
 
