@@ -2,20 +2,34 @@ import path from "path";
 import { cosineSimilarity } from "../lib/utils.js";
 
 export class HybridSearch {
-  constructor(embedder, cache, config) {
+  constructor(embedder, cache, config, indexer = null) {
     this.embedder = embedder;
     this.cache = cache;
     this.config = config;
+    this.indexer = indexer; // Reference to indexer for status checking
   }
 
   async search(query, maxResults) {
     const vectorStore = this.cache.getVectorStore();
     
     if (vectorStore.length === 0) {
+      // Check if indexing is in progress
+      if (this.indexer?.indexingStatus?.inProgress) {
+        return {
+          results: [],
+          message: `Indexing in progress (${this.indexer.indexingStatus.percentage}% complete). Search available but results may be incomplete. Please wait for indexing to finish for full coverage.`
+        };
+      }
       return {
         results: [],
         message: "No code has been indexed yet. Please wait for initial indexing to complete."
       };
+    }
+    
+    // Show warning if indexing is still in progress but we have some results
+    let indexingWarning = null;
+    if (this.indexer?.indexingStatus?.inProgress) {
+      indexingWarning = `⚠️ Indexing in progress (${this.indexer.indexingStatus.percentage}% complete). Results shown are from partially indexed codebase.\n\n`;
     }
 
     // Generate query embedding
@@ -50,7 +64,7 @@ export class HybridSearch {
       .sort((a, b) => b.score - a.score)
       .slice(0, maxResults);
 
-    return { results, message: null };
+    return { results, message: null, indexingWarning };
   }
 
   formatResults(results) {
@@ -105,7 +119,7 @@ export async function handleToolCall(request, hybridSearch) {
   const query = request.params.arguments.query;
   const maxResults = request.params.arguments.maxResults || hybridSearch.config.maxResults;
   
-  const { results, message } = await hybridSearch.search(query, maxResults);
+  const { results, message, indexingWarning } = await hybridSearch.search(query, maxResults);
   
   if (message) {
     return {
@@ -113,7 +127,12 @@ export async function handleToolCall(request, hybridSearch) {
     };
   }
 
-  const formattedText = hybridSearch.formatResults(results);
+  let formattedText = hybridSearch.formatResults(results);
+  
+  // Prepend indexing warning if present
+  if (indexingWarning) {
+    formattedText = indexingWarning + formattedText;
+  }
   
   return {
     content: [{ type: "text", text: formattedText }]

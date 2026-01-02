@@ -61,10 +61,12 @@
   "watchFiles": false,
   "verbose": false,
   "embeddingModel": "nomic-ai/nomic-embed-text-v1.5",
-  "embeddingDimension": 256,
+  "embeddingDimension": 128,
   "device": "auto",
   "chunkingMode": "smart",
   "semanticWeight": 0.7,
   "exactMatchBoost": 1.5,
-  "workerThreads": "auto"
+  "workerThreads": "auto",
+  "maxCpuPercent": 50,
+  "batchDelay": 100
 }

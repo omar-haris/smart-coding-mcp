@@ -46,6 +46,34 @@ This MCP server solves that by indexing your codebase with AI embeddings. Your A
 - Your code never leaves your system
 - No API calls to external services
 
+## Performance & Resource Management
+
+**Progressive Indexing**
+
+- Search works immediately, even while indexing continues (like video buffering)
+- Incremental saves every 5 batches - no data loss if interrupted
+- Real-time indexing status shown when searching during indexing
+
+**Resource Throttling**
+
+- CPU usage limited to 50% by default (configurable)
+- Your laptop stays responsive during indexing
+- Configurable delays between batches
+- Worker thread limits respect system resources
+
+**SQLite Cache**
+
+- 5-10x faster than JSON for large codebases
+- Write-Ahead Logging (WAL) for better concurrency
+- Binary blob storage for smaller cache size
+- Automatic migration from JSON
+
+**Optimized Defaults**
+
+- 128d embeddings by default (2x faster than 256d, minimal quality loss)
+- Smart batch sizing based on project size
+- Parallel processing with auto-tuned worker threads
+
 ## Installation
 
 Install globally via npm:
@@ -144,10 +172,13 @@ Override configuration settings via environment variables in your MCP config:
 | `SMART_CODING_SEMANTIC_WEIGHT`     | number  | `0.7`                            | Weight for semantic similarity (0-1)       |
 | `SMART_CODING_EXACT_MATCH_BOOST`   | number  | `1.5`                            | Boost for exact text matches               |
 | `SMART_CODING_EMBEDDING_MODEL`     | string  | `nomic-ai/nomic-embed-text-v1.5` | AI embedding model to use                  |
-| `SMART_CODING_EMBEDDING_DIMENSION` | number  | `256`                            | MRL dimension (64, 128, 256, 512, 768)     |
+| `SMART_CODING_EMBEDDING_DIMENSION` | number  | `128`                            | MRL dimension (64, 128, 256, 512, 768)     |
 | `SMART_CODING_DEVICE`              | string  | `cpu`                            | Inference device (`cpu`, `webgpu`, `auto`) |
 | `SMART_CODING_CHUNKING_MODE`       | string  | `smart`                          | Code chunking (`smart`, `ast`, `line`)     |
 | `SMART_CODING_WORKER_THREADS`      | string  | `auto`                           | Worker threads (`auto` or 1-32)            |
+| `SMART_CODING_MAX_CPU_PERCENT`     | number  | `50`                             | Max CPU usage during indexing (10-100%)    |
+| `SMART_CODING_BATCH_DELAY`         | number  | `100`                            | Delay between batches in ms (0-5000)       |
+| `SMART_CODING_MAX_WORKERS`         | string  | `auto`                           | Override max worker threads limit          |
 
 **Example with environment variables:**
 
@@ -202,8 +233,9 @@ flowchart TB
     end
 
     subgraph Storage["Cache"]
-        Vectors["Vector Store<br/>embeddings.json"]
+        Vectors["SQLite Database<br/>embeddings.db (WAL mode)"]
         Hashes["File Hashes<br/>Incremental updates"]
+        Progressive["Progressive Indexing<br/>Search works during indexing"]
     end
 
     Agent <-->|"MCP Protocol"| Protocol

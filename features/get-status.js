@@ -48,20 +48,43 @@ export class StatusReporter {
     // Get unique files from vector store
     const uniqueFiles = new Set(vectorStore.map(v => v.file));
     
-    // Get cache size
+    // Get cache size (check for SQLite database)
     let cacheSizeBytes = 0;
+    let cacheType = 'none';
     try {
-      const cachePath = path.join(this.config.cacheDirectory, 'embeddings.json');
-      const stats = await fs.stat(cachePath);
+      // Check for SQLite cache first
+      const sqlitePath = path.join(this.config.cacheDirectory, 'embeddings.db');
+      const stats = await fs.stat(sqlitePath);
       cacheSizeBytes = stats.size;
+      cacheType = 'sqlite';
     } catch {
-      // Cache file doesn't exist yet
+      // Try old JSON cache as fallback
+      try {
+        const jsonPath = path.join(this.config.cacheDirectory, 'embeddings.json');
+        const stats = await fs.stat(jsonPath);
+        cacheSizeBytes = stats.size;
+        cacheType = 'json';
+      } catch {
+        // No cache file exists
+        cacheType = 'none';
+      }
     }
 
-    // Determine index status
+    // Determine index status and progressive indexing info
     let indexStatus = 'empty';
+    let progressiveIndexing = null;
+    
     if (this.indexer?.isIndexing) {
       indexStatus = 'indexing';
+      // Include progressive indexing status
+      if (this.indexer.indexingStatus) {
+        progressiveIndexing = {
+          inProgress: this.indexer.indexingStatus.inProgress,
+          totalFiles: this.indexer.indexingStatus.totalFiles,
+          processedFiles: this.indexer.indexingStatus.processedFiles,
+          percentage: this.indexer.indexingStatus.percentage
+        };
+      }
     } else if (vectorStore.length > 0) {
       indexStatus = 'ready';
     }
@@ -85,11 +108,13 @@ export class StatusReporter {
         status: indexStatus,
         filesIndexed: uniqueFiles.size,
         chunksCount: vectorStore.length,
-        chunkingMode: this.config.chunkingMode
+        chunkingMode: this.config.chunkingMode,
+        ...(progressiveIndexing && { progressiveIndexing })
       },
 
       cache: {
         enabled: this.config.enableCache,
+        type: cacheType,
         path: this.config.cacheDirectory,
         sizeBytes: cacheSizeBytes,
         sizeFormatted: formatBytes(cacheSizeBytes)
@@ -101,6 +126,12 @@ export class StatusReporter {
         semanticWeight: this.config.semanticWeight,
         exactMatchBoost: this.config.exactMatchBoost,
         workerThreads: this.config.workerThreads
+      },
+      
+      resourceThrottling: {
+        maxCpuPercent: this.config.maxCpuPercent,
+        batchDelay: this.config.batchDelay,
+        maxWorkers: this.config.maxWorkers
       }
     };
   }
