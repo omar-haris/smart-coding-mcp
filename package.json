@@ -1,6 +1,6 @@
 {
   "name": "smart-coding-mcp",
-  "version": "2.1.1",
+  "version": "2.2.0",
   "description": "An extensible MCP server that enhances coding productivity with AI-powered features including semantic code search, intelligent indexing, and more, using local LLMs",
   "type": "module",
   "main": "index.js",
