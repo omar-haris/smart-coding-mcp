@@ -446,11 +446,15 @@ export class CodebaseIndexer {
       percentage: 0
     };
 
+    // Declare counters outside try block so they're accessible in finally
+    let processedFiles = 0;
+    let skippedFiles = 0;
+
     try {
       if (force) {
         console.error("[Indexer] Force reindex requested: clearing cache");
         this.cache.setVectorStore([]);
-        this.cache.fileHashes = new Map();
+        this.cache.clearAllFileHashes();
       }
 
       const totalStartTime = Date.now();
@@ -471,7 +475,7 @@ export class CodebaseIndexer {
     // Step 1.5: Prune deleted or excluded files from cache
     if (!force) {
       const currentFilesSet = new Set(files);
-      const cachedFiles = Array.from(this.cache.fileHashes.keys());
+      const cachedFiles = Array.from(this.cache.getAllFileHashes().keys());
       let prunedCount = 0;
 
       for (const cachedFile of cachedFiles) {
@@ -509,8 +513,6 @@ export class CodebaseIndexer {
     }
 
     let totalChunks = 0;
-    let processedFiles = 0;
-    let skippedFiles = 0;
     let batchCounter = 0;  // Track batches for incremental saves
     
     // Update total file count for status tracking (estimated, will adjust as we filter)
